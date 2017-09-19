@@ -43,19 +43,26 @@ save() {
 
     [ ! -d "$BACKUP_DIRECTORY" ] && mkdir -p "$BACKUP_DIRECTORY"
 
-    if [[ $(date '+%m%d') == 0101 ]]; then
+    # check if today is the 1st weekday of the year
+    if $($(echo '0101 0102 0103' | grep -q $(date '+%m%d')) && [[ $(date '+%u') == 1 ]]) || \
+        $($(echo '2 3 4 5' | grep -q $(date '+%u')) && [[ $(date '+%m%d') == 0101 ]]);
+    then
         echo "saving yearly db and attachments"
         dump_database "year-$(date '+%Y')-db-$USER-$COOG_DB_NAME.dump.gz"
         dump_attachments "year-$(date '+%Y')-attachments-$USER-$COOG_DB_NAME.tar.gz"
     fi
 
-    if [[ $(date '+%d') == 01 ]]; then
+    # check if today is the 1st weekday of the month
+    if $(echo '01 02 03' | grep -q $(date '+%d')) && [[ $(date '+%u') == 1 ]] || \
+        $(echo '2 3 4 5' | grep -q $(date '+%u')) && [[ $(date +'%d') == 01 ]];
+    then
         echo "saving monthly db and attachments"
         dump_database "month-$(date '+%Y%m')-db-$USER-$COOG_DB_NAME.dump.gz"
         dump_attachments "month-$(date '+%Y%m')-attachments-$USER-$COOG_DB_NAME.tar.gz"
     fi
 
-    if [[ $(date '+%u') == 0 ]]; then
+    # weekly backup on Friday
+    if [[ $(date '+%u') == 5 ]]; then
         echo "saving weekly db and attachments"
         dump_database "week-$(date '+%V')-db-$USER-$COOG_DB_NAME.dump.gz"
         dump_attachments "week-$(date '+%V')-attachments-$USER-$COOG_DB_NAME.tar.gz"
@@ -70,15 +77,15 @@ clean() {
     source "$(get_dir)/config"
     [[ $# -ne 0 ]] && usage && exit 1
 
-    stock_daily_db="$(expr $(ls -d $BACKUP_DIRECTORY/*daily-db* | wc -l) - 7)"
-    stock_weekly_db="$(expr $(ls -d $BACKUP_DIRECTORY/*week*db* | wc -l) - 4)"
-    stock_monthly_db="$(expr $(ls -d $BACKUP_DIRECTORY/*month*db* | wc -l) - 3)"
-    stock_yearly_db="$(expr $(ls -d $BACKUP_DIRECTORY/*year*db* | wc -l) - 2)"
+    stock_daily_db="$(expr $(ls -d $BACKUP_DIRECTORY/ | grep -c '^daily-db$' || exit 1) - 7)"
+    stock_weekly_db="$(expr $(ls -d $BACKUP_DIRECTORY/ | grep -c '^week*db$' || exit 1) - 4)"
+    stock_monthly_db="$(expr $(ls -d $BACKUP_DIRECTORY/ | grep -c '^month*db$' || exit 1) - 3)"
+    stock_yearly_db="$(expr $(ls -d $BACKUP_DIRECTORY/ | grep -c '^year*db$' || exit 1) - 2)"
 
-    stock_daily_attach="$(expr $(ls -d $BACKUP_DIRECTORY/*daily-attachments* | wc -l) - 7)"
-    stock_weekly_attach="$(expr $(ls -d $BACKUP_DIRECTORY/*week*attachments* | wc -l) - 4)"
-    stock_monthly_attach="$(expr $(ls -d $BACKUP_DIRECTORY/*month*attachments* | wc -l) - 3)"
-    stock_yearly_attach="$(expr $(ls -d $BACKUP_DIRECTORY/*year*attachments* | wc -l) - 2)"
+    stock_daily_attach="$(expr $(ls -d $BACKUP_DIRECTORY/ | grep -c '^daily-attachments$' || exit 1) - 7)"
+    stock_weekly_attach="$(expr $(ls -d $BACKUP_DIRECTORY/ | grep -c '^week*attachments$' || exit 1) - 4)"
+    stock_monthly_attach="$(expr $(ls -d $BACKUP_DIRECTORY/ | grep -c '^month*attachments$' || exit 1) - 3)"
+    stock_yearly_attach="$(expr $(ls -d $BACKUP_DIRECTORY/ | grep -c '^year*attachments$' || exit 1) - 2)"
 
     if [[ $stock_daily_db -gt 0 ]]; then
         echo "cleaning daily db"
